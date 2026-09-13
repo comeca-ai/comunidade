@@ -1,7 +1,7 @@
 // Tema CLÁSSICO — institucional, claro, leitura longa.
 // Serifa nos títulos, azul acadêmico, numeração de aulas.
 
-import { M, FONTES, FAMILIA, LOGO } from "../packages/identidade/marca";
+import { M, FONTES, FAMILIA, LOGO, PONTOS } from "../packages/identidade/marca";
 
 export const CSS = `
 :root{
@@ -25,8 +25,8 @@ p{margin:0}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted)}
 
-/* cabeçalho institucional */
-.topo{background:var(--azul);color:#fff}
+/* cabeçalho institucional — azul fundo da marca com a textura de pontos */
+.topo{background:${M.marcaFunda};${PONTOS("rgba(255,255,255,.13)")};color:#fff}
 .topo a{color:#fff}
 .topo-in{display:flex;align-items:center;justify-content:space-between;height:62px;
   max-width:1180px;margin:0 auto;padding:0 28px}
@@ -35,9 +35,11 @@ p{margin:0}
   display:grid;place-items:center;font-size:12px;font-family:'JetBrains Mono',monospace}
 .topo .mono{color:#C7C5F7}
 
-/* trilha de navegação */
-.migalha{background:var(--papel);border-bottom:1px solid var(--linha);
-  padding:11px 0;font-size:13px;color:var(--muted)}
+/* trilha de navegação — rótulo mono, como no design */
+.migalha{background:#fff;border-bottom:1px solid var(--linha);padding:12px 0;
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted)}
+.migalha b{color:var(--texto);font-weight:500}
 
 /* layout com barra lateral */
 .layout{display:grid;gap:22px;padding:24px 0}
@@ -436,7 +438,7 @@ ${FONTES}
       <span class="mono">${esc(o.aluno.nome || o.aluno.email)}</span>
       <a href="/sair" style="font-size:13px">Sair</a></div>` : ""}
 </div></header>
-${o.aluno ? `<div class="migalha"><div class="wrap">Ambiente Virtual de Aprendizagem &nbsp;›&nbsp; ${esc(o.titulo)}</div></div>` : ""}
+${o.aluno ? `<div class="migalha"><div class="wrap">AVA &nbsp;›&nbsp; <b>${esc(o.titulo)}</b></div></div>` : ""}
 ${o.corpo}
 <footer class="wrap" style="padding:48px 28px;border-top:1px solid var(--linha);margin-top:50px">
   <p class="mono">${esc(o.escola)} · Ambiente Virtual de Aprendizagem</p>

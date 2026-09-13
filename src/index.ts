@@ -15,7 +15,8 @@ import { rotasDesempenho, posicaoSalva, avaliacaoDe, blocoAvaliacao, SCRIPT_PLAY
 import { emSegundoPlano } from "./apoio";
 import { rotasProvas, situacaoProvas, bloqueioDe, linhaProvaModulo, provasParaCertificado } from "./provas";
 import { rotasEquipe, ehAdmin as ehAdminEquipe } from "./equipe";
-import { rotasNoticias, atualizarNoticias, noticiasAprovadas, secaoNoticias } from "./noticias";
+import { rotasNoticias, atualizarNoticias, noticiasAprovadas } from "./noticias";
+import { corpoJornada } from "./jornada";
 
 type Env = {
   DB: D1Database;
@@ -324,108 +325,19 @@ app.get("/app", exigeLogin, async (c) => {
     noticiasAprovadas(c.env),
   ]);
 
-  const total = aulas.length;
-  const feitas = aulas.filter((a) => a.concluida_em).length;
-  const pct = total ? Math.round((feitas / total) * 100) : 0;
-  const minutos = aulas.reduce((s, a) => s + a.duracao_seg, 0);
-  const proxima = aulas.find((a) => !a.concluida_em);
-
   const modulos = new Map<string, LinhaAula[]>();
   for (const a of aulas) {
     if (!modulos.has(a.modulo)) modulos.set(a.modulo, []);
     modulos.get(a.modulo)!.push(a);
   }
-  // prova exigida de um módulo anterior ainda não aprovada tranca as aulas
-  const ordemModulos = [...modulos.keys()];
-  const trancaDe = (m: string) => bloqueioDe(provas, ordemModulos, m);
   const admin = await ehAdmin(c, aluno);
 
-  const lateral = `<aside class="lateral">
-    <h3>Sumário do curso</h3>
-    <ol>${[...modulos.keys()].map((m) =>
-      `<li><a href="#m-${encodeURIComponent(m)}">${esc(m)}</a></li>`).join("")}
-      ${leituras.length ? `<li><a href="#leituras">Leituras</a></li>` : ""}
-      ${noticias.length ? `<li><a href="#noticias">No radar</a></li>` : ""}</ol>
-  </aside>`;
-
-  let n = 0;
-  const conteudo = `<div>
-    <h1>Sua jornada</h1>
-    <p style="color:var(--muted);margin-top:8px">
-      ${total} aulas · ${duracao(minutos)} de conteúdo · ${feitas} concluída${feitas === 1 ? "" : "s"}${
-        leituras.length ? ` · ${leituras.length} leitura${leituras.length === 1 ? "" : "s"}` : ""}
-    </p>
-
-    <section class="grade grade-3" style="margin-top:26px">
-      <div class="card stat"><p class="mono">Aproveitamento</p><p class="num">${pct}<span>%</span></p>
-        <div class="barra" style="margin-top:12px"><i style="width:${pct}%"></i></div></div>
-      <div class="card stat"><p class="mono">Aulas cursadas</p><p class="num">${feitas}<span> / ${total}</span></p></div>
-      <div class="card stat"><p class="mono">Carga horária</p><p class="num">${duracao(minutos)}</p></div>
-    </section>
-
-    ${pct === 100 && cert.pendentes.length
-      ? `<section class="card diploma" style="margin-top:18px;text-align:center">
-           <p class="mono">Aulas concluídas</p>
-           <h2 style="margin:10px 0">Falta${cert.pendentes.length === 1 ? "" : "m"} ${cert.pendentes.length === 1 ? "a prova" : `${cert.pendentes.length} provas`} para o certificado</h2>
-           <p style="color:var(--muted)">O certificado sai com a aprovação nas provas de módulo${cert.aproveitamento != null ? ` · aproveitamento até agora ${cert.aproveitamento}%` : ""}.</p>
-           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:18px">
-             ${cert.pendentes.map((m) => `<a class="btn btn-primario" href="/app/prova/${encodeURIComponent(m)}">Prova: ${esc(m)}</a>`).join("")}
-           </div>
-         </section>`
-      : pct === 100
-      ? `<section class="card diploma" style="margin-top:18px;text-align:center">
-           <p class="mono">Curso concluído</p>
-           <h2 style="margin:10px 0">Você completou todas as aulas</h2>
-           <p style="color:var(--muted)">
-             ${modulos.size} módulos · ${total} aulas · ${duracao(minutos)} de carga horária${cert.aproveitamento != null ? ` · aproveitamento ${cert.aproveitamento}% nas provas` : ""}
-           </p>
-           <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:18px">
-             <a class="btn btn-primario" href="/app/certificado">Ver certificado</a>
-             <form method="post" action="/app/relatorio">
-               <button class="btn btn-fantasma" type="submit">Receber relatório por e-mail</button>
-             </form>
-           </div>
-         </section>`
-      : proxima
-        ? `<section class="card" style="margin-top:18px;display:flex;flex-wrap:wrap;
-              align-items:center;justify-content:space-between;gap:16px">
-             <div><p class="mono">Retomar</p>
-               <h3 style="margin-top:6px">${esc(proxima.titulo)}</h3>
-               <p class="aula-meta">${esc(proxima.modulo)} · ${duracao(proxima.duracao_seg)}</p></div>
-             <a class="btn btn-primario" href="/app/aula/${esc(proxima.uid)}">Continuar</a>
-           </section>`
-        : ""}
-
-    ${[...modulos.entries()].map(([nome, lista]) => {
-      const ok = lista.filter((a) => a.concluida_em).length;
-      const tranca = trancaDe(nome);
-      return `<section class="modulo" id="m-${encodeURIComponent(nome)}">
-        <div class="modulo-topo"><h2>${esc(nome)}</h2>
-          <span class="mono">${tranca ? "🔒 " : ""}${ok} de ${lista.length}</span></div>
-        ${tranca ? `<p class="aula-meta" style="margin:-6px 0 8px">Abre com a aprovação na <a href="/app/prova/${encodeURIComponent(tranca)}">prova de ${esc(tranca)}</a>.</p>` : ""}
-        ${lista.map((a) => {
-          n++;
-          return `<a class="aula ${a.concluida_em ? "feita" : ""} ${tranca ? "trancada" : ""}" href="${tranca ? `/app/prova/${encodeURIComponent(tranca)}?bloqueio=1` : `/app/aula/${esc(a.uid)}`}">
-            <span class="num-aula">${String(n).padStart(2, "0")}</span>
-            <span class="check">${tranca && !a.concluida_em ? "🔒" : "✓"}</span>
-            <span class="aula-txt"><b>${esc(a.titulo)}</b>
-              <span class="aula-meta">${duracao(a.duracao_seg)}</span></span>
-          </a>`;
-        }).join("")}
-        ${linhaProvaModulo(nome, provas.get(nome), lista.length - ok)}
-        ${admin && !provas.get(nome)?.publicada ? `<p class="aula-meta" style="margin-top:8px;opacity:.8">Só você vê: ${provas.get(nome) ? "prova em rascunho — publique" : "sem prova ainda — gere e publique"} em <a href="/admin#provas">Provas</a>.</p>` : ""}
-      </section>`;
-    }).join("")}
-
-    ${secaoLeituras(leituras)}
-
-    ${secaoNoticias(noticias, agora())}
-  </div>`;
-
-  const corpo = total === 0
-    ? `<main class="wrap"><div class="vazio card" style="margin-top:40px">
-         <h2>Nenhuma aula publicada</h2></div></main>`
-    : `<main class="wrap"><div class="layout">${lateral}${conteudo}</div></main>`;
+  const corpo = corpoJornada({
+    nomeEscola: c.env.NOME_ESCOLA,
+    subtitulo: c.env.ESCOLA_TITULO,
+    aluno, modulos, provas, cert, leituras, noticias, admin,
+    agora: agora(),
+  });
 
   return c.html(pagina({ escola: c.env.NOME_ESCOLA, titulo: "Sua jornada", aluno, corpo }));
 });
