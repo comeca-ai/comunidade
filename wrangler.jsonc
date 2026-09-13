@@ -74,5 +74,52 @@
   // leituras em PDF (prefixo artigos/ no mesmo bucket das outras escolas)
   "r2_buckets": [{ "binding": "SLIDES", "bucket_name": "slidesaulas" }],
 
-  "send_email": [{ "name": "EMAIL" }]
+  "send_email": [{ "name": "EMAIL" }],
+
+  /* ── homologação ─────────────────────────────────────────────────────────
+     Segundo Worker para validar mudança grande antes de produção. Banco D1 e
+     bucket R2 PRÓPRIOS (nenhum dado de aluno real), mesmo Stream (as aulas
+     sincronizam sozinhas pelo cron), sem domínio próprio — só a URL
+     workers.dev. Deploy: push na branch `homolog` (CI) ou
+     `npx wrangler deploy --env homolog`. Sem segredos: transcrição nova,
+     cortador e triagem por Model Studio ficam desligados (a triagem de
+     notícias cai no Workers AI); o admin de homolog entra pela tabela
+     `administradores`, semeada na criação do banco. */
+  "env": {
+    "homolog": {
+      "name": "escola-classica-homolog",
+      "workers_dev": true,
+      "triggers": { "crons": ["*/15 * * * *"] },
+      "vars": {
+        "ESCOLA": "classica",
+        "DOMINIO": "",
+        "DOMINIOS_ANTIGOS": "",
+        "ESCOLA_TITULO": "Curso completo",
+        "ESCOLA_SUBTITULO": "Ambiente Virtual de Aprendizagem · HOMOLOGAÇÃO",
+        "NOME_ESCOLA": "começa.ai · homolog",
+        "STREAM_SUBDOMINIO": "customer-0b8qbusp05k8f01y.cloudflarestream.com",
+        "EMAIL_REMETENTE": "aulas@noreply.comeca.ai",
+        "MINUTOS_HORA_AULA": "60",
+        "MODULO_PADRAO": "Entrevistas: dados, IA e empreendedorismo",
+        "ORDEM_MODULOS": "Introdução a Imersão | História e Evolução da Inteligência Artificial | Dados e Conceitos fundamentais | Algoritmos | Ética e Privacidade | Sessões Práticas | Entrevistas: dados, IA e empreendedorismo",
+        "CF_ACCOUNT_ID": "749b2e9b3642e4b03321d5830e81c195",
+        "CORTES_REPOSITORIO": "comeca-ai/escoladofuturo",
+        "MODELOS_BASE": "https://ws-1pvp9wq6k8pv0n4t.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+        "MODELO_CORTES": "qwen3.8-max",
+        "MODELO_CORTES_EDITOR": "kimi-k3",
+        "MODELO_EMBED": "text-embedding-v4"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "escola-homolog",
+          "database_id": "9f621f8d-6bd4-4dde-b6e9-12abd9487e68" // gitleaks:allow
+        }
+      ],
+      "stream": { "binding": "STREAM" },
+      "ai": { "binding": "AI" },
+      "r2_buckets": [{ "binding": "SLIDES", "bucket_name": "slidesaulas-homolog" }],
+      "send_email": [{ "name": "EMAIL" }]
+    }
+  }
 }

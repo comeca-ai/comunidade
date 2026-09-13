@@ -22,5 +22,5 @@ regex = '''"database_id"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 # Sem o CLOUDFLARE_API_TOKEN ninguém usa esse id. Precisa estar no
 # wrangler.jsonc para o wrangler deploy, e no histórico do commit a6ec893.
 [allowlist]
-description = "database_id do D1 escola — identificador, não credencial"
-regexes = ['''3de1a8d7-1005-48a9-b9c1-a96238ac5024''']
+description = "database_ids dos D1 escola e escola-homolog — identificadores, não credenciais"
+regexes = ['''3de1a8d7-1005-48a9-b9c1-a96238ac5024''', '''9f621f8d-6bd4-4dde-b6e9-12abd9487e68''']

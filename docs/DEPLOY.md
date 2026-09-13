@@ -82,6 +82,20 @@ Entre pela URL do Worker, receba o link por e-mail e vá em `/admin`.
 
 `/admin` → *Sincronizar com o Stream* (ou espere o cron de 15 min).
 
+## Homologação
+
+Para mudança grande, valide antes em **homologação**: um segundo Worker
+(`escola-classica-homolog`, só na URL workers.dev) com banco D1
+(`escola-homolog`) e bucket R2 (`slidesaulas-homolog`) próprios — nenhum dado
+de aluno real. O mesmo Stream alimenta as aulas pelo cron, então o conteúdo
+aparece sozinho em poucos minutos. De propósito, homolog roda **sem
+segredos**: transcrição nova, cortador e Model Studio desligados (a triagem
+de notícias cai no Workers AI). O admin entra pelo link mágico normal — o
+e-mail dele está semeado na tabela `administradores` do banco de homolog.
+
+Fluxo: branch `homolog` → push publica em homologação → validou, merge na
+`main` publica em produção. À mão: `npx wrangler deploy --env homolog`.
+
 ## Rodar local
 
 ```bash

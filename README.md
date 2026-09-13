@@ -75,8 +75,10 @@ npm run dev        # local (Stream e Email não funcionam localmente)
 npm run deploy     # publica o Worker escola-classica
 ```
 
-O deploy contínuo (push na `main`) está em `.github/workflows/deploy.yml` —
-segredos necessários em [.github/workflows/README.md](.github/workflows/README.md).
+O deploy contínuo está em `.github/workflows/deploy.yml`: push na `main`
+publica em produção; push na branch `homolog` publica no ambiente de
+homologação (Worker, banco e bucket próprios — ver `docs/DEPLOY.md`).
+Segredos necessários em [.github/workflows/README.md](.github/workflows/README.md).
 
 ## Origem
 

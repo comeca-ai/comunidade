@@ -1,10 +1,12 @@
 name: Deploy
 
-# Publica na Cloudflare a cada push na main que toque o código do Worker.
+# Publica na Cloudflare a cada push que toque o código do Worker:
+#   main    → produção (escola-classica, comunidade.comeca.ai)
+#   homolog → homologação (escola-classica-homolog, workers.dev, banco próprio)
 
 on:
   push:
-    branches: [main]
+    branches: [main, homolog]
     paths:
       - "src/**"
       - "packages/**"
@@ -79,16 +81,31 @@ jobs:
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
 
-      - name: Verificar o build antes de publicar
-        run: npx wrangler deploy --dry-run --outdir=/tmp/build
+      - name: Alvo (produção ou homologação)
+        id: alvo
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/homolog" ]; then
+            echo "flag=--env homolog" >> "$GITHUB_OUTPUT"
+            echo "url=https://escola-classica-homolog.jhonata-emerick.workers.dev/" >> "$GITHUB_OUTPUT"
+            echo "ambiente=homologação" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+            echo "url=https://escola-classica.jhonata-emerick.workers.dev/" >> "$GITHUB_OUTPUT"
+            echo "ambiente=produção" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Publicar
-        run: npx wrangler deploy
+      - name: Verificar o build antes de publicar
+        run: npx wrangler deploy --dry-run --outdir=/tmp/build ${{ steps.alvo.outputs.flag }}
+
+      - name: Publicar (${{ steps.alvo.outputs.ambiente }})
+        run: npx wrangler deploy ${{ steps.alvo.outputs.flag }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Segredos do Worker
+        # só em produção — homolog roda de propósito sem segredos
+        if: github.ref == 'refs/heads/main'
         # os segredos de execução ficam nos secrets do repositório e descem para
         # o Worker aqui (uma versão só, via secret bulk). Sem valor no
         # repositório, o segredo correspondente do Worker fica como está.
@@ -110,7 +127,7 @@ jobs:
 
       - name: Conferir que o ar respondeu
         run: |
-          url="https://escola-classica.jhonata-emerick.workers.dev/"
+          url="${{ steps.alvo.outputs.url }}"
           for i in 1 2 3 4 5; do
             codigo=$(curl -s -o /tmp/pagina -w "%{http_code}" "$url" || echo 000)
             [ "$codigo" = "200" ] && break
