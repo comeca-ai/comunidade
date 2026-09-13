@@ -165,6 +165,19 @@ pelo mesmo link mágico do aluno. Remover tira só o painel; o acesso de aluno
 continua. Ninguém remove a si mesmo, e os fixos saem só pelo `wrangler.jsonc`.
 Tabela `administradores` (escola, e-mail, quem adicionou, quando).
 
+## Notícias — "No radar"
+
+O bloco no fim da jornada do aluno com notícias de IA, empreendedorismo e
+estratégia. O cron coleta os feeds RSS das fontes (~1x/h; a lista de fontes é
+código, em `src/noticias.ts`), a IA tria e resume cada item (Model Studio com
+`MODELOS_API_KEY`, senão Workers AI), e a aba **Notícias** do painel decide o
+que vai ao ar — nada aparece ao aluno sem aprovação. Cada item é título,
+resumo de uma frase e link com crédito; o texto integral fica na fonte.
+*Buscar e triar agora* força uma passada sem esperar o cron. Aprovada, a
+notícia entra na hora; *Tirar do ar* remove na hora. Itens com mais de 21
+dias não são coletados, e o que a IA marca como fora de tema morre sem
+passar pelo painel.
+
 ## Provas de módulo
 
 Ao terminar as aulas de um módulo, o aluno vê na trilha a linha **Prova do

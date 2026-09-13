@@ -9,7 +9,8 @@ no código, sem senha para o aluno.
 Ambiente Virtual de Aprendizagem tradicional: sumário fixo à esquerda, trilha
 de navegação, aulas numeradas em sequência, aproveitamento em porcentagem,
 leituras em PDF com marca-d'água, provas por módulo, certificado com validação
-pública e relatório de progresso por e-mail. Fundo claro, azul da marca,
+pública, relatório de progresso por e-mail e um radar de notícias de IA e
+negócios com curadoria no painel. Fundo claro, azul da marca,
 densidade alta — a leitura de quem já usou um AVA.
 
 ## Rotas
@@ -22,7 +23,7 @@ densidade alta — a leitura de quem já usou um AVA.
 | `/app/aula/:uid` | player e marcação de conclusão |
 | `/app/prova/:modulo` | prova do módulo (abre ao concluir as aulas) e `/resultado` da última tentativa |
 | `/app/certificado`, `/certificado/:codigo` | certificado do aluno e validação pública — retidos até a aprovação nas provas publicadas (ajuste no painel) |
-| `/admin` | painel: alunos, funil, desempenho, provas, convites, aulas, leituras, Inteligência (busca na fala, cortes) e equipe (outros admins) |
+| `/admin` | painel: alunos, funil, desempenho, provas, convites, aulas, leituras, Inteligência (busca na fala, cortes), notícias (curadoria do "No radar") e equipe (outros admins) |
 | `/admin/provas/:modulo` | revisão e edição das questões de um módulo (`/salvar`); gerar, publicar, exigir e o ajuste do certificado são POSTs em `/admin/provas/*` |
 | `/admin/cortes/:id/video.mp4` | download do corte gerado (admin) |
 | `/cortes/fila`, `/cortes/retorno` | cortador do GitHub Actions (segredo `CORTES_CHAVE`) |
@@ -40,7 +41,7 @@ público, e um link copiado não funciona para terceiros.
 ## Estrutura
 
 ```
-src/            o Worker (Hono): rotas, painel, player, funil, provas, cortes
+src/            o Worker (Hono): rotas, painel, player, funil, provas, cortes, notícias
 packages/
   identidade/   cores, tipografia e marca do começa.ai
   conteudo/     classificação de título → módulo; formato das transcrições

@@ -15,6 +15,7 @@ import { rotasDesempenho, posicaoSalva, avaliacaoDe, blocoAvaliacao, SCRIPT_PLAY
 import { emSegundoPlano } from "./apoio";
 import { rotasProvas, situacaoProvas, bloqueioDe, linhaProvaModulo, provasParaCertificado } from "./provas";
 import { rotasEquipe, ehAdmin as ehAdminEquipe } from "./equipe";
+import { rotasNoticias, atualizarNoticias, noticiasAprovadas, secaoNoticias } from "./noticias";
 
 type Env = {
   DB: D1Database;
@@ -315,11 +316,12 @@ async function aulasComProgresso(c: any, alunoId: number): Promise<LinhaAula[]> 
 
 app.get("/app", exigeLogin, async (c) => {
   const aluno = c.get("aluno");
-  const [aulas, leituras, provas, cert] = await Promise.all([
+  const [aulas, leituras, provas, cert, noticias] = await Promise.all([
     aulasComProgresso(c, aluno.id),
     leiturasDoAluno(c.env, aluno.id),
     situacaoProvas(c.env, aluno.id),
     provasParaCertificado(c.env, aluno.id),
+    noticiasAprovadas(c.env),
   ]);
 
   const total = aulas.length;
@@ -342,7 +344,8 @@ app.get("/app", exigeLogin, async (c) => {
     <h3>Sumário do curso</h3>
     <ol>${[...modulos.keys()].map((m) =>
       `<li><a href="#m-${encodeURIComponent(m)}">${esc(m)}</a></li>`).join("")}
-      ${leituras.length ? `<li><a href="#leituras">Leituras</a></li>` : ""}</ol>
+      ${leituras.length ? `<li><a href="#leituras">Leituras</a></li>` : ""}
+      ${noticias.length ? `<li><a href="#noticias">No radar</a></li>` : ""}</ol>
   </aside>`;
 
   let n = 0;
@@ -415,6 +418,8 @@ app.get("/app", exigeLogin, async (c) => {
     }).join("")}
 
     ${secaoLeituras(leituras)}
+
+    ${secaoNoticias(noticias, agora())}
   </div>`;
 
   const corpo = total === 0
@@ -931,6 +936,7 @@ app.route("/", rotasCortes({ exigeAdmin, agora }));
 app.route("/", rotasDesempenho({ exigeLogin, agora }));
 app.route("/", rotasProvas({ exigeLogin, exigeAdmin, agora, aulasComProgresso }));
 app.route("/", rotasEquipe({ exigeAdmin, agora }));
+app.route("/", rotasNoticias({ exigeAdmin, agora }));
 
 export default {
   fetch: app.fetch,
@@ -940,6 +946,8 @@ export default {
       .then(() => garantirTabelasTranscricao(env)).then(() => semearDoBundle(env, agora()))
       .then(() => avancarTranscricoes(env, agora()))
       // vetores para a busca por significado (só com MODELOS_API_KEY)
-      .then(() => avancarVetores(env, agora())).catch((e) => console.error("transcrições:", e))),
+      .then(() => avancarVetores(env, agora()))
+      // notícias "No radar": coleta ~1x/h + triagem por IA do que chegou
+      .then(() => atualizarNoticias(env, agora())).catch((e) => console.error("transcrições:", e))),
 };
 export type { Env, Aluno };

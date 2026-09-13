@@ -13,6 +13,7 @@ import { garantirTabelaCortes, cortesRecentes, secaoCortes, temAcionador, urlAco
 import { temModelos, modeloCortes } from "./modelos";
 import { dadosDesempenho, secaoDesempenho } from "./desempenho";
 import { adminsDe, secaoEquipe } from "./equipe";
+import { noticiasParaAdmin, secaoNoticiasAdmin } from "./noticias";
 import { resumoProvas, ajustesProvas, secaoProvas, situacaoProvas, secaoProvasAluno, provasParaCertificado } from "./provas";
 import { regrasDoEnv, moduloNaLeitura, listaDeModulos } from "../packages/conteudo/modulos";
 
@@ -139,6 +140,7 @@ export function rotasAdmin(d: Deps) {
       ajustesProvas(c.env),
     ]);
     const equipe = await adminsDe(c.env);
+    const noticias = await noticiasParaAdmin(c.env);
     const provasPublicadas = [...provas.values()].filter((p) => p.estado === "publicada" && p.questoes > 0).length;
     const transcritas = new Set(aulasTranscricao.filter((a) => a.estado === "pronto").map((a) => a.uid));
 
@@ -188,6 +190,7 @@ export function rotasAdmin(d: Deps) {
         <a href="#aulas" class="aba" role="tab" data-aba="aulas">Aulas <span class="aba-n">${totalAulas}</span></a>
         <a href="#leituras" class="aba" role="tab" data-aba="leituras">Leituras</a>
         <a href="#inteligencia" class="aba" role="tab" data-aba="inteligencia">Inteligência</a>
+        <a href="#noticias" class="aba" role="tab" data-aba="noticias">Notícias${noticias.pendentes.length ? ` <span class="aba-n" title="para revisar">${noticias.pendentes.length}</span>` : ""}</a>
         <a href="#equipe" class="aba" role="tab" data-aba="equipe">Equipe <span class="aba-n">${equipe.length}</span></a>
       </nav>
 
@@ -310,6 +313,10 @@ export function rotasAdmin(d: Deps) {
           rotuloIA: temModelos(c.env) ? `IA: ${modeloCortes(c.env)} (Model Studio) · busca por significado` : "",
           rotuloRapido: modeloCortes(c.env), editor: temModelos(c.env) ? modeloEditor(c.env) : "",
           aviso: q.corte ? `<div class="aviso" style="margin-bottom:14px">${esc(q.corte)}</div>` : "" })}
+      </section>
+
+      <section id="noticias" class="painel-aba" role="tabpanel" hidden>
+        ${secaoNoticiasAdmin({ ...noticias, agora, aviso: q.noticias ? `<div class="aviso" style="margin-bottom:14px">${esc(q.noticias)}</div>` : "" })}
       </section>
 
       <section id="equipe" class="painel-aba" role="tabpanel" hidden>
