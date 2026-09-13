@@ -1,0 +1,26 @@
+title = "Varredura de segredos — comunidade"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "token-cloudflare-usuario"
+description = "Token de API da Cloudflare (cfut_)"
+regex = '''cfut_[A-Za-z0-9_-]{20,}'''
+
+[[rules]]
+id = "chave-alibaba-model-studio"
+description = "Chave do Alibaba Model Studio (sk-ws-)"
+regex = '''sk-ws-[A-Za-z0-9._-]{20,}'''
+
+[[rules]]
+id = "id-de-banco-d1"
+description = "database_id real deixado no wrangler.jsonc"
+regex = '''"database_id"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"'''
+
+# UUID do D1 compartilhado (escola). Identificador da conta, não token.
+# Sem o CLOUDFLARE_API_TOKEN ninguém usa esse id. Precisa estar no
+# wrangler.jsonc para o wrangler deploy, e no histórico do commit a6ec893.
+[allowlist]
+description = "database_id do D1 escola — identificador, não credencial"
+regexes = ['''3de1a8d7-1005-48a9-b9c1-a96238ac5024''']

@@ -1,0 +1,78 @@
+{
+  "name": "escola-classica",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // mantém a URL .workers.dev viva junto do domínio próprio;
+  // sem esta linha o wrangler a desabilita ao criar o custom domain
+  "workers_dev": true,
+
+  // sincroniza o Stream sozinho — vídeo novo entra sem clicar no painel
+  "triggers": { "crons": ["*/15 * * * *"] },
+
+  "routes": [
+    { "pattern": "comunidade.comeca.ai", "custom_domain": true },
+    // domínio anterior: o Worker responde 301 para o atual (ver DOMINIO abaixo)
+    { "pattern": "classica.comeca.ai", "custom_domain": true }
+  ],
+
+  "vars": {
+    "ESCOLA": "classica",
+    // endereço oficial; qualquer host listado em DOMINIOS_ANTIGOS redireciona para cá
+    "DOMINIO": "comunidade.comeca.ai",
+    "DOMINIOS_ANTIGOS": "classica.comeca.ai",
+    "ESCOLA_TITULO": "Curso completo",
+    "ESCOLA_SUBTITULO": "Ambiente Virtual de Aprendizagem",
+    "NOME_ESCOLA": "começa.ai",
+    "STREAM_SUBDOMINIO": "customer-0b8qbusp05k8f01y.cloudflarestream.com",
+    "EMAIL_REMETENTE": "aulas@noreply.comeca.ai",
+    // ADMINS é segredo do Worker: npx wrangler secret put ADMINS
+    // hora-aula do certificado: 60 = hora cheia. Troque para 45 ou 50
+    // se a convenção da escola for outra.
+    "MINUTOS_HORA_AULA": "60",
+    // vídeo avulso (sem [Módulo], [Parte N] ou [Sessão Prática] no título e
+    // fora da ORDEM_MODULOS) cai aqui — palestras, talks, entrevistas.
+    // Para abrir um módulo novo: põe na ORDEM_MODULOS ou usa o prefixo.
+    "MODULO_PADRAO": "Entrevistas: dados, IA e empreendedorismo",
+    // ordem da trilha, separada por "|" (nome pode ter vírgula) — módulos fora
+    // desta lista vão para o fim
+    "ORDEM_MODULOS": "Introdução a Imersão | História e Evolução da Inteligência Artificial | Dados e Conceitos fundamentais | Algoritmos | Ética e Privacidade | Sessões Práticas | Entrevistas: dados, IA e empreendedorismo",
+    // Segredos (não ficam aqui): CORTES_CHAVE, DEEPGRAM_API_KEY e GH_TOKEN_CORTES
+    // entram pelo deploy (.github/workflows/deploy.yml → wrangler secret bulk, a
+    // partir dos secrets do repositório). STREAM_API_TOKEN (Stream:Edit) é
+    // opcional — clipe pela API REST do Stream, alternativa ao cortador.
+    "CF_ACCOUNT_ID": "749b2e9b3642e4b03321d5830e81c195",
+    // repositório onde roda o cortador (workflow cortes.yml). Hoje ainda é o
+    // monorepo antigo; para migrar para este repo, veja os comentários em
+    // .github/workflows/cortes.yml
+    "CORTES_REPOSITORIO": "comeca-ai/escoladofuturo",
+    // API de modelos compatível com OpenAI (Model Studio da Alibaba, workspace
+    // da começa.ai): busca por significado nas transcrições e escolha dos cortes.
+    // O segredo MODELOS_API_KEY entra pelo deploy; sem ele, cai no Workers AI.
+    "MODELOS_BASE": "https://ws-1pvp9wq6k8pv0n4t.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+    "MODELO_CORTES": "qwen3.8-max",
+    // "editor-chefe": pensa à vontade (uns 3 min) e escolhe melhor; a aba espera
+    "MODELO_CORTES_EDITOR": "kimi-k3",
+    "MODELO_EMBED": "text-embedding-v4"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "escola",
+      "database_id": "3de1a8d7-1005-48a9-b9c1-a96238ac5024" // gitleaks:allow
+    }
+  ],
+
+  "stream": { "binding": "STREAM" },
+
+  // escolha dos cortes (aba Inteligência)
+  "ai": { "binding": "AI" },
+
+  // leituras em PDF (prefixo artigos/ no mesmo bucket das outras escolas)
+  "r2_buckets": [{ "binding": "SLIDES", "bucket_name": "slidesaulas" }],
+
+  "send_email": [{ "name": "EMAIL" }]
+}

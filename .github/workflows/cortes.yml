@@ -1,0 +1,53 @@
+name: Cortes para redes
+
+# Roda o cortador (tools/cortar.mjs): pega no painel os cortes aprovados, gera o
+# vertical com legenda e o horizontal com ffmpeg e devolve para o painel, que
+# passa a mostrar "Baixar vertical (Reels)" e "Baixar horizontal".
+#
+# Dispara na hora quando o painel aprova um corte (workflow_dispatch pelo
+# Worker, com GH_TOKEN_CORTES) e, de segurança, de hora em hora. Cada rodada
+# custa ~1 min de Actions — a de hora em hora sem nada na fila também.
+
+on:
+  workflow_dispatch:
+  # A rodada de hora em hora fica DESLIGADA enquanto o cortador oficial rodar
+  # no repositório apontado por CORTES_REPOSITORIO no wrangler.jsonc
+  # (hoje comeca-ai/escoladofuturo). Para migrar o cortador para este repo:
+  # 1. crie aqui os secrets CORTES_CHAVE (o mesmo do Worker) e os de deploy;
+  # 2. troque CORTES_REPOSITORIO para "comeca-ai/comunidade" e publique;
+  # 3. reative o bloco abaixo e desative o cortes.yml do repositório antigo.
+  # schedule:
+  #   - cron: "17 * * * *"
+
+concurrency:
+  group: cortes
+  cancel-in-progress: false
+
+jobs:
+  cortar:
+    name: Cortar aprovados
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # só o script e as fontes; a legenda vem do painel, não do repositório
+          sparse-checkout: tools
+
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+
+      - name: ffmpeg
+        # a imagem ubuntu-latest não traz ffmpeg; o apt leva ~40 s
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg >/dev/null
+          fi
+          ffmpeg -version | head -1
+
+      - name: Cortar e devolver ao painel
+        env:
+          CORTES_CHAVE: ${{ secrets.CORTES_CHAVE }}
+        run: |
+          if [ -z "$CORTES_CHAVE" ]; then echo "::error::sem CORTES_CHAVE nos secrets do repositório"; exit 1; fi
+          node tools/cortar.mjs --fila https://comunidade.comeca.ai --saida /tmp/cortes

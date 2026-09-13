@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Deliberadamente frouxo por ora: o objetivo é pegar código quebrado,
+    // não fazer uma limpeza de tipos. Apertar isso é tarefa própria — veja
+    // docs/SEGURANCA.md.
+    "strict": false,
+    "noImplicitAny": false
+  },
+  "include": ["src/**/*.ts", "packages/**/*.ts", "transcricoes/index.ts"]
+}

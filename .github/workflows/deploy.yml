@@ -1,0 +1,126 @@
+name: Deploy
+
+# Publica na Cloudflare a cada push na main que toque o código do Worker.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "packages/**"
+      - "transcricoes/**"
+      - "wrangler.jsonc"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auditar:
+    name: Auditar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 0 }
+
+      - name: Varrer segredos no histórico
+        # binário direto em vez da action oficial: ela exige licença paga em
+        # repositório privado de organização e falha mesmo sem achar nada
+        run: |
+          versao=8.28.0
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${versao}/gitleaks_${versao}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          /tmp/gitleaks dir . --config .gitleaks.toml --redact --verbose
+          /tmp/gitleaks git . --config .gitleaks.toml --redact
+
+      - name: Procurar dado pessoal de aluno no código
+        run: |
+          # o cadastro de aluno vive no banco, nunca no repositório
+          achou=$(grep -rInoE '[a-zA-Z0-9._%+-]+@(gmail|hotmail|outlook|yahoo|terra|uol|bol)\.[a-z.]+' \
+                    --include='*.ts' --include='*.json' --include='*.jsonc' --include='*.sql' . || true)
+          if [ -n "$achou" ]; then
+            echo "::error::e-mail pessoal encontrado no código — o cadastro pertence ao banco"
+            echo "$achou"; exit 1
+          fi
+          echo "Nenhum e-mail pessoal no código."
+
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+
+      - name: Conferir tipos
+        # informativo por ora — apertar os tipos é tarefa própria (docs/SEGURANCA.md)
+        continue-on-error: true
+        run: |
+          npm install --no-audit --no-fund --silent
+          npm run typecheck
+
+      - name: Auditar dependências
+        # informativo: falha em dependência de terceiro não deve travar o deploy
+        continue-on-error: true
+        run: npm audit --audit-level=high || true
+
+  publicar:
+    name: Publicar
+    needs: [auditar]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
+
+      - name: Verificar o build antes de publicar
+        run: npx wrangler deploy --dry-run --outdir=/tmp/build
+
+      - name: Publicar
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Segredos do Worker
+        # os segredos de execução ficam nos secrets do repositório e descem para
+        # o Worker aqui (uma versão só, via secret bulk). Sem valor no
+        # repositório, o segredo correspondente do Worker fica como está.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CORTES_CHAVE: ${{ secrets.CORTES_CHAVE }}
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          GH_TOKEN_CORTES: ${{ secrets.GH_TOKEN_CORTES }}
+          MODELOS_API_KEY: ${{ secrets.MODELOS_API_KEY }}
+        run: |
+          node -e '
+            const nomes = ["CORTES_CHAVE", "DEEPGRAM_API_KEY", "GH_TOKEN_CORTES", "MODELOS_API_KEY"];
+            const s = Object.fromEntries(nomes.filter((n) => process.env[n]).map((n) => [n, process.env[n]]));
+            console.log("com valor:", Object.keys(s).join(", ") || "nenhum", "· sem valor:", nomes.filter((n) => !s[n]).join(", ") || "nenhum");
+            if (Object.keys(s).length) require("fs").writeFileSync("/tmp/segredos.json", JSON.stringify(s), { mode: 0o600 });
+          '
+          if [ -f /tmp/segredos.json ]; then npx wrangler secret bulk /tmp/segredos.json; rm -f /tmp/segredos.json; fi
+
+      - name: Conferir que o ar respondeu
+        run: |
+          url="https://escola-classica.jhonata-emerick.workers.dev/"
+          for i in 1 2 3 4 5; do
+            codigo=$(curl -s -o /tmp/pagina -w "%{http_code}" "$url" || echo 000)
+            [ "$codigo" = "200" ] && break
+            sleep 5
+          done
+          if [ "$codigo" != "200" ]; then
+            echo "::error::o Worker respondeu $codigo depois de publicar"; exit 1
+          fi
+          # a página de entrada nunca pode expor a lista de alunos
+          if grep -qiE '@(gmail|hotmail|terra|outlook)\.' /tmp/pagina; then
+            echo "::error::e-mail exposto na página pública"; exit 1
+          fi
+          echo "$url respondeu 200 e não expõe e-mail."
