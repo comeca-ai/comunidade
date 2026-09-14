@@ -16,6 +16,7 @@ import { adminsDe, secaoEquipe } from "./equipe";
 import { noticiasParaAdmin, secaoNoticiasAdmin } from "./noticias";
 import { resumoProvas, ajustesProvas, secaoProvas, situacaoProvas, secaoProvasAluno, provasParaCertificado } from "./provas";
 import { regrasDoEnv, moduloNaLeitura, listaDeModulos } from "../packages/conteudo/modulos";
+import { fatosHoje, briefingParaExibir, secaoHoje } from "./hoje";
 
 type Deps = {
   exigeAdmin: any;
@@ -141,7 +142,8 @@ export function rotasAdmin(d: Deps) {
     ]);
     const equipe = await adminsDe(c.env);
     const noticias = await noticiasParaAdmin(c.env);
-    const provasPublicadas = [...provas.values()].filter((p) => p.estado === "publicada" && p.questoes > 0).length;
+    const fatos = await fatosHoje(c.env, agora);
+    const briefing = await briefingParaExibir(c.env, fatos);
     const transcritas = new Set(aulasTranscricao.filter((a) => a.estado === "pronto").map((a) => a.uid));
 
     const ativos = alunos.filter((a) => a.ultimo_acesso && agora - a.ultimo_acesso < 7 * DIA).length;
@@ -174,27 +176,41 @@ export function rotasAdmin(d: Deps) {
     const funil = kanbanAlunos(alunos, totalAulas, agora);
     const minutosTotais = [...grupos.values()].flat().reduce((s: number, a: any) => s + a.duracao_seg, 0);
 
+    // fila do cockpit: provas em rascunho, cortes sugeridos, 3 notícias mais recentes
+    const provasRascunho = [...provas.values()].filter((p) => p.estado === "rascunho" && p.questoes > 0);
+    const cortesSugeridos = cortes.filter((x: any) => x.estado === "sugerido");
+    const avisoHoje = q.corte && q.volta === "hoje" ? `<div class="aviso" style="margin-bottom:14px">${esc(q.corte)}</div>`
+      : q.noticias && q.volta === "hoje" ? `<div class="aviso" style="margin-bottom:14px">${esc(q.noticias)}</div>` : "";
+
     const corpo = `<main class="wrap painel">
       <div class="painel-topo">
-        <div><p class="mono">Administração</p><h1>Painel</h1></div>
-        <p class="aula-meta">${alunos.length} aluno${alunos.length === 1 ? "" : "s"} · ${totalAulas} aula${totalAulas === 1 ? "" : "s"} · ${duracao(minutosTotais)}</p>
+        <p class="mono">Painel · Administração</p>
+        <p class="aula-meta">${alunos.length} aluno${alunos.length === 1 ? "" : "s"} · ${totalAulas} aula${totalAulas === 1 ? "" : "s"} · ${duracao(minutosTotais)} de conteúdo · ${ativos} ativo${ativos === 1 ? "" : "s"} esta semana</p>
       </div>
       ${aviso ? `<div style="margin-bottom:18px">${aviso}</div>` : ""}
 
       <nav class="abas" role="tablist">
+        <a href="#hoje" class="aba" role="tab" data-aba="hoje">Hoje</a>
         <a href="#alunos" class="aba" role="tab" data-aba="alunos">Alunos <span class="aba-n">${alunos.length}</span></a>
         <a href="#funil" class="aba" role="tab" data-aba="funil">Funil</a>
         <a href="#desempenho" class="aba" role="tab" data-aba="desempenho">Desempenho${desempenho.kpi.alertas ? ` <span class="aba-n" title="aulas com alerta">${desempenho.kpi.alertas}</span>` : ""}</a>
-        <a href="#provas" class="aba" role="tab" data-aba="provas">Provas${provasPublicadas ? ` <span class="aba-n" title="provas publicadas">${provasPublicadas}</span>` : ""}</a>
+        <a href="#provas" class="aba" role="tab" data-aba="provas">Provas${provasRascunho.length ? ` <span class="aba-n" title="provas em rascunho aguardando revisão">${provasRascunho.length}</span>` : ""}</a>
         <a href="#convidar" class="aba" role="tab" data-aba="convidar">Convidar${pedidos.length ? ` <span class="aba-n" title="pedidos pelo site">${pedidos.length}</span>` : ""}</a>
-        <a href="#aulas" class="aba" role="tab" data-aba="aulas">Aulas <span class="aba-n">${totalAulas}</span></a>
+        <a href="#aulas" class="aba" role="tab" data-aba="aulas">Aulas</a>
         <a href="#leituras" class="aba" role="tab" data-aba="leituras">Leituras</a>
-        <a href="#inteligencia" class="aba" role="tab" data-aba="inteligencia">Inteligência</a>
+        <a href="#inteligencia" class="aba" role="tab" data-aba="inteligencia">Inteligência${cortesSugeridos.length ? ` <span class="aba-n" title="cortes sugeridos aguardando aprovação">${cortesSugeridos.length}</span>` : ""}</a>
         <a href="#noticias" class="aba" role="tab" data-aba="noticias">Notícias${noticias.pendentes.length ? ` <span class="aba-n" title="para revisar">${noticias.pendentes.length}</span>` : ""}</a>
-        <a href="#equipe" class="aba" role="tab" data-aba="equipe">Equipe <span class="aba-n">${equipe.length}</span></a>
+        <a href="#equipe" class="aba" role="tab" data-aba="equipe">Equipe</a>
       </nav>
 
-      <section id="alunos" class="painel-aba" role="tabpanel">
+      <section id="hoje" class="painel-aba" role="tabpanel">
+        ${secaoHoje({ f: fatos, briefing, agora, provas: provasRascunho, cortes: cortesSugeridos,
+          noticias: noticias.pendentes.slice(0, 3), alertas: desempenho.kpi.alertas,
+          alertasDe: desempenho.aulas.length, retencao: desempenho.kpi.retencao,
+          terminam: desempenho.kpi.terminam, aviso: avisoHoje })}
+      </section>
+
+      <section id="alunos" class="painel-aba" role="tabpanel" hidden>
         <div class="grade grade-4 resumo">
           <button class="card stat filtro-card" data-filtro="todos" type="button"><p class="mono">Alunos</p><p class="num">${alunos.length}</p></button>
           <button class="card stat filtro-card" data-filtro="ativo" type="button"><p class="mono">Ativos · 7d</p><p class="num">${ativos}</p></button>
@@ -692,12 +708,12 @@ const PAINEL_JS = `
   // o hash pode ser uma aba (#funil) ou um elemento dentro dela (#cortes):
   // abre a aba que contém o elemento e rola até ele
   function abrir(id){ var alvo=document.getElementById(id), sec=alvo&&alvo.closest?alvo.closest(".painel-aba"):null;
-    if(sec) id=sec.id; if(!document.getElementById(id)) id="alunos";
+    if(sec) id=sec.id; if(!document.getElementById(id)) id="hoje";
     abas.forEach(function(a){ a.classList.toggle("ativa", a.dataset.aba===id); });
     paineis.forEach(function(p){ p.hidden = p.id!==id; });
     if(sec && alvo!==sec) setTimeout(function(){ alvo.scrollIntoView({block:"start"}); }, 0); }
   abas.forEach(function(a){ a.addEventListener("click", function(e){ e.preventDefault(); history.replaceState(null,"","#"+a.dataset.aba); abrir(a.dataset.aba); }); });
-  abrir((location.hash||("#"+(new URLSearchParams(location.search).get("aba")||"alunos"))).slice(1));
+  abrir((location.hash||("#"+(new URLSearchParams(location.search).get("aba")||"hoje"))).slice(1));
   window.addEventListener("hashchange", function(){ abrir(location.hash.slice(1)); });
 
   var filtro="todos", termo="", visao=null;

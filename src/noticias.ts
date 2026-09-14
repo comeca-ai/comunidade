@@ -273,11 +273,15 @@ export function rotasNoticias(d: Deps) {
     const eu = c.get("aluno");
     const form = await c.req.formData();
     const id = Number(form.get("id"));
-    if (!Number.isInteger(id)) return volta(c, "Notícia não encontrada.");
+    // o cockpit "Hoje" também aprova/oculta — a resposta volta para onde o clique foi dado
+    const paraHoje = form.get("volta") === "hoje";
+    const responder = (m: string) => paraHoje
+      ? c.redirect(`/admin?volta=hoje&noticias=${encodeURIComponent(m)}#hoje`) : volta(c, m);
+    if (!Number.isInteger(id)) return responder("Notícia não encontrada.");
     await garantirTabelaNoticias(c.env);
     await c.env.DB.prepare(`UPDATE noticias SET estado = ?, avaliada_por = ?, avaliada_em = ? WHERE id = ? AND escola = ?`)
       .bind(estado, String(eu.email).toLowerCase(), d.agora(), id, c.env.ESCOLA).run();
-    return volta(c, msg);
+    return responder(msg);
   };
   r.post("/admin/noticias/aprovar", d.exigeAdmin, mudar("aprovada", "Notícia no ar para os alunos."));
   r.post("/admin/noticias/ocultar", d.exigeAdmin, mudar("oculta", "Notícia fora do ar."));

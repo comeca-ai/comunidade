@@ -7,6 +7,9 @@ export const CSS = `
 :root{
   --bg:${M.papelFundo}; --papel:#FFFFFF; --linha:${M.linha}; --linha-forte:#BFBFBF;
   --texto:${M.tinta}; --muted:${M.tinta60}; --azul:${M.marca}; --azul-claro:#E9E8FD;
+  --azul-fundo:${M.marcaFunda};
+  /* --amarelo (M.destaque) é EXCLUSIVO do CTA principal dentro do briefing azul do painel */
+  --amarelo:${M.destaque}; --vermelho:#8B2A20; --vermelho-claro:#FDECEA;
   --verde:${M.marca}; --raio:${M.raio};
 }
 *{box-sizing:border-box}
@@ -312,6 +315,57 @@ details.card summary::before{content:"▸ ";color:var(--muted)}details.card[open
 .funil-acao{margin-top:4px}
 .funil-acao .btn{width:100%;font-size:13px;padding:8px 10px}
 @media(max-width:720px){.funil{grid-template-columns:1fr;overflow:visible}.funil-col{min-height:0}}
+
+/* cockpit "Hoje" — briefing herói, fila de trabalho, números com hierarquia */
+.hj-briefing{background:var(--azul-fundo);${PONTOS("rgba(255,255,255,.13)")};color:#fff;
+  border-radius:var(--raio);padding:26px 28px 24px;margin-bottom:8px}
+.hj-briefing .mono{color:#C7C5F7}
+.hj-briefing-txt{font-size:19px;line-height:1.55;margin-top:12px;max-width:74ch}
+.hj-acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.hj-btn-destaque{background:var(--amarelo);color:var(--azul-fundo)}
+.hj-btn-destaque:hover{filter:brightness(1.05);text-decoration:none}
+.hj-btn-vazado{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.55)}
+.hj-btn-vazado:hover{background:rgba(255,255,255,.12);text-decoration:none}
+.hj-item{display:grid;grid-template-columns:74px minmax(0,1fr) auto;gap:6px 16px;align-items:center;
+  padding:14px 6px;border-bottom:1px solid var(--linha)}
+.hj-item-tipo{padding-top:3px}
+.hj-item-txt b{display:block;font-weight:600;font-size:15px}
+.hj-item-txt b a{color:var(--texto)}
+.hj-item-txt .aula-meta{display:block;margin-top:2px}
+.hj-item-acoes{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.hj-item-acoes .btn{padding:8px 14px;font-size:13px}
+.hj-item-mais{border-bottom:0}
+.hj-alerta{border-top:3px solid var(--vermelho)}
+.hj-num-alerta{color:var(--vermelho)!important}
+.hj-vazio{border-style:dashed;background:transparent;box-shadow:none}
+.hj-2col{display:grid;gap:14px;margin-top:14px}
+@media(min-width:900px){.hj-2col{grid-template-columns:1.05fr 1fr}}
+.hj-funil-topo{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.hj-link{font-size:14px;font-weight:600}
+.hj-funil-linha{display:grid;grid-template-columns:110px minmax(0,1fr) 42px;gap:4px 12px;
+  align-items:center;padding:7px 0}
+.hj-funil-linha b{font-weight:600;font-size:14px}
+.hj-funil-barra{display:block;height:14px;background:#EDEAE3;border-radius:3px;overflow:hidden}
+.hj-funil-barra i{display:block;height:100%;background:var(--azul);border-radius:3px}
+.hj-funil-n{font-weight:700;color:var(--azul);text-align:right;font-size:15px}
+.hj-funil-nota{grid-column:2/-1;font-size:12.5px}
+.hj-perda{color:var(--vermelho)}
+.hj-mov .hj-mov-linha{display:flex;justify-content:space-between;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--linha);font-size:14.5px}
+.hj-mov .hj-mov-linha:last-of-type{border-bottom:0}
+.hj-mov .hj-mov-linha b{font-weight:700}
+@media(max-width:720px){
+  .hj-briefing{padding:20px 18px 18px}
+  .hj-briefing-txt{font-size:17px}
+  .hj-acoes form,.hj-acoes .btn{width:100%}
+  .hj-item{grid-template-columns:minmax(0,1fr)}
+  .hj-item-acoes{justify-content:flex-start;padding-top:2px}
+  .hj-funil-linha{grid-template-columns:minmax(0,1fr) 42px}
+  .hj-funil-linha b{grid-column:1/-1}
+  .hj-funil-nota{grid-column:1/-1}
+  #hoje .modulo-topo{flex-wrap:wrap}
+  #hoje .modulo-topo .mono{white-space:normal;flex-basis:100%}
+}
 
 /* inteligência: busca na fala e transcrição embaixo do vídeo */
 mark{background:#FFF1A8;color:inherit;padding:0 2px;border-radius:2px}

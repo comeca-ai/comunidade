@@ -16,6 +16,7 @@ import { emSegundoPlano } from "./apoio";
 import { rotasProvas, situacaoProvas, bloqueioDe, linhaProvaModulo, provasParaCertificado } from "./provas";
 import { rotasEquipe, ehAdmin as ehAdminEquipe } from "./equipe";
 import { rotasNoticias, atualizarNoticias, noticiasAprovadas } from "./noticias";
+import { atualizarBriefing } from "./hoje";
 import { corpoJornada } from "./jornada";
 
 type Env = {
@@ -860,6 +861,8 @@ export default {
       // vetores para a busca por significado (só com MODELOS_API_KEY)
       .then(() => avancarVetores(env, agora()))
       // notícias "No radar": coleta ~1x/h + triagem por IA do que chegou
-      .then(() => atualizarNoticias(env, agora())).catch((e) => console.error("transcrições:", e))),
+      .then(() => atualizarNoticias(env, agora()))
+      // briefing do cockpit "Hoje": a IA reescreve quando os fatos mudam
+      .then(() => atualizarBriefing(env, agora())).catch((e) => console.error("transcrições:", e))),
 };
 export type { Env, Aluno };

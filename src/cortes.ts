@@ -430,13 +430,17 @@ export function rotasCortes(d: Deps) {
 
   r.post("/admin/cortes/:id/aprovar", d.exigeAdmin, async (c) => {
     const id = Number(c.req.param("id"));
+    // o cockpit "Hoje" também aprova — a resposta volta para onde o clique foi dado
+    const form = await c.req.formData().catch(() => null);
+    const responder = (msg: string) => c.redirect(form?.get("volta") === "hoje"
+      ? `/admin?volta=hoje&corte=${encodeURIComponent(msg)}#hoje` : volta(msg));
     await c.env.DB.prepare(`UPDATE cortes SET estado='aprovado', erro=NULL WHERE id=? AND estado='sugerido'`).bind(id).run();
     if (c.env.CORTES_CHAVE) {
       await emSegundoPlano(c, acionarCortador(c.env));
-      return c.redirect(volta(`Corte aprovado e na fila: o cortador gera o vertical com legenda e o horizontal em ${temAcionador(c.env) ? "uns 3 min" : "até 1 h"}. Os botões de baixar aparecem aqui.`));
+      return responder(`Corte aprovado e na fila: o cortador gera o vertical com legenda e o horizontal em ${temAcionador(c.env) ? "uns 3 min" : "até 1 h"}. Os botões de baixar aparecem na aba Inteligência.`);
     }
     if (c.env.STREAM_API_TOKEN && c.env.CF_ACCOUNT_ID) return gerar(c, id);
-    return c.redirect(volta("Corte aprovado. Sem cortador configurado o vídeo não é gerado aqui — use início/fim e o SRT no editor."));
+    return responder("Corte aprovado. Sem cortador configurado o vídeo não é gerado aqui — use início/fim e o SRT no editor.");
   });
 
   // corte com erro volta para a fila do cortador
@@ -527,10 +531,12 @@ export function rotasCortes(d: Deps) {
 
   r.post("/admin/cortes/:id/descartar", d.exigeAdmin, async (c) => {
     const id = Number(c.req.param("id"));
+    const form = await c.req.formData().catch(() => null);
     await c.env.DB.prepare(`DELETE FROM cortes WHERE id=?`).bind(id).run();
     // arquivos gerados pelo cortador saem junto
     await c.env.SLIDES.delete(Object.keys(FORMATOS).map((f) => chaveR2(id, f))).catch(() => {});
-    return c.redirect(volta("Corte descartado."));
+    return c.redirect(form?.get("volta") === "hoje"
+      ? `/admin?volta=hoje&corte=${encodeURIComponent("Corte descartado.")}#hoje` : volta("Corte descartado."));
   });
 
   r.get("/admin/cortes/:id/legenda.srt", d.exigeAdmin, async (c) => {
