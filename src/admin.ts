@@ -189,6 +189,41 @@ export function rotasAdmin(d: Deps) {
       </div>
       ${aviso ? `<div style="margin-bottom:18px">${aviso}</div>` : ""}
 
+<style>
+.abas{display:none!important}
+.gnav{display:flex;gap:4px;border-bottom:1px solid var(--linha)}
+.gtab{display:block;padding:10px 16px 12px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.gtab b{font-size:15px;font-weight:600;display:flex;align-items:center;gap:7px;color:inherit}
+.gtab .gdica{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.gtab.ativa{border-bottom-color:#1F1BE4}
+.gtab.ativa b{color:#1F1BE4}
+.snav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.schip{border:1px solid var(--linha);border-radius:99px;padding:6px 15px;font-size:13px;display:flex;align-items:center;gap:6px}
+.schip.ativa{background:#1F1BE4;border-color:#1F1BE4;color:#fff}
+.schip.ativa .aba-n{background:#fff;color:#000}
+</style>
+<nav class="gnav" role="tablist">
+<a href="#hoje" class="gtab" data-grupo="hoje"><b>Hoje</b><span class="gdica">o que precisa de você</span></a>
+<a href="#alunos" class="gtab" data-grupo="alunos"><b>Alunos <span class="aba-n">${alunos.length}</span></b><span class="gdica">pessoas, funil e pulso</span></a>
+<a href="#aulas" class="gtab" data-grupo="conteudo"><b>Conteúdo${provasRascunho.length + cortesSugeridos.length + noticias.pendentes.length ? ` <span class="aba-n">${provasRascunho.length + cortesSugeridos.length + noticias.pendentes.length}</span>` : ""}</b><span class="gdica">aulas, leituras, provas, notícias</span></a>
+<a href="#equipe" class="gtab" data-grupo="config"><b>Configurações</b><span class="gdica">equipe e acesso</span></a>
+</nav>
+<div class="snav" data-snav="alunos" hidden>
+<a href="#alunos" class="schip">Visão geral</a>
+<a href="#funil" class="schip">Funil de entrada</a>
+<a href="#convidar" class="schip">Convidar${pedidos.length ? ` <span class="aba-n">${pedidos.length}</span>` : ""}</a>
+</div>
+<div class="snav" data-snav="conteudo" hidden>
+<a href="#aulas" class="schip">Aulas</a>
+<a href="#desempenho" class="schip">Desempenho${desempenho.kpi.alertas ? ` <span class="aba-n">${desempenho.kpi.alertas}</span>` : ""}</a>
+<a href="#leituras" class="schip">Leituras</a>
+<a href="#provas" class="schip">Provas${provasRascunho.length ? ` <span class="aba-n">${provasRascunho.length}</span>` : ""}</a>
+<a href="#noticias" class="schip">Notícias${noticias.pendentes.length ? ` <span class="aba-n">${noticias.pendentes.length}</span>` : ""}</a>
+<a href="#inteligencia" class="schip">Inteligência${cortesSugeridos.length ? ` <span class="aba-n">${cortesSugeridos.length}</span>` : ""}</a>
+</div>
+<div class="snav" data-snav="config" hidden>
+<a href="#equipe" class="schip">Equipe</a>
+</div>
       <nav class="abas" role="tablist">
         <a href="#hoje" class="aba" role="tab" data-aba="hoje">Hoje</a>
         <a href="#alunos" class="aba" role="tab" data-aba="alunos">Alunos <span class="aba-n">${alunos.length}</span></a>
@@ -737,8 +772,13 @@ const PAINEL_JS = `
     if(sec) id=sec.id; if(!document.getElementById(id)) id="hoje";
     abas.forEach(function(a){ a.classList.toggle("ativa", a.dataset.aba===id); });
     paineis.forEach(function(p){ p.hidden = p.id!==id; });
+        var G={hoje:"hoje",alunos:"alunos",funil:"alunos",convidar:"alunos",aulas:"conteudo",desempenho:"conteudo",leituras:"conteudo",provas:"conteudo",noticias:"conteudo",inteligencia:"conteudo",equipe:"config"}, g=G[id]||"hoje";
+            document.querySelectorAll(".gtab").forEach(function(t){ t.classList.toggle("ativa", t.dataset.grupo===g); });
+                document.querySelectorAll("[data-snav]").forEach(function(s){ s.hidden = s.dataset.snav!==g; });
+                    document.querySelectorAll(".schip").forEach(function(s){ s.classList.toggle("ativa", (s.getAttribute("href")||"").slice(1)===id); });
     if(sec && alvo!==sec) setTimeout(function(){ alvo.scrollIntoView({block:"start"}); }, 0); }
   abas.forEach(function(a){ a.addEventListener("click", function(e){ e.preventDefault(); history.replaceState(null,"","#"+a.dataset.aba); abrir(a.dataset.aba); }); });
+    document.querySelectorAll(".gtab,.schip").forEach(function(a){ a.addEventListener("click", function(e){ e.preventDefault(); var id=(a.getAttribute("href")||"#hoje").slice(1); history.replaceState(null,"","#"+id); abrir(id); }); });
   abrir((location.hash||("#"+(new URLSearchParams(location.search).get("aba")||"hoje"))).slice(1));
   window.addEventListener("hashchange", function(){ abrir(location.hash.slice(1)); });
 
