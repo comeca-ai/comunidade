@@ -89,6 +89,9 @@
     "homolog": {
       "name": "escola-classica-homolog",
       "workers_dev": true,
+      // vazio de propósito: sem isto o env herda as routes de produção e o
+      // deploy de homolog rouba os custom domains (incidente de 14/set/2026)
+      "routes": [],
       "triggers": { "crons": ["*/15 * * * *"] },
       "vars": {
         "ESCOLA": "classica",
