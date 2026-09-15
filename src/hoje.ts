@@ -14,6 +14,7 @@ import { haQuanto, DIA, diaLocal } from "./apoio";
 import { temModelos, conversar } from "./modelos";
 import type { Noticia } from "./noticias";
 import type { ResumoProva } from "./provas";
+import { pulsoDaTurma, secaoPulso, type PulsoTurma } from "./pulso";
 
 /* ---------------- fatos: a mesma fonte para o briefing e para a tela ---------------- */
 
@@ -27,6 +28,7 @@ export type FatosHoje = {
   etapas: number[];       // quantos estão em cada etapa do funil (0..4)
   provasRascunho: string[]; cortesSugeridos: number; noticiasPendentes: number; noticiasNovas: number;
   piorAula: { titulo: string; nao: number; n: number } | null;
+    pulso: PulsoTurma | null; // Activity Score · janela de 30 dias (ver pulso.ts)
 };
 
 export async function fatosHoje(env: any, agora: number): Promise<FatosHoje> {
@@ -58,6 +60,7 @@ export async function fatosHoje(env: any, agora: number): Promise<FatosHoje> {
        FROM avaliacoes av JOIN aulas au ON au.uid = av.aula_uid
        GROUP BY av.aula_uid HAVING nao > 0 ORDER BY nao DESC, n DESC LIMIT 1`).first().catch(() => null),
   ]);
+    const pulso = await pulsoDaTurma(env, agora).catch(() => null);
   const linhas: any[] = al.results ?? [];
   const totalAulas = Number(tot?.n ?? 0);
   const etapas = [0, 0, 0, 0, 0];
@@ -83,6 +86,7 @@ export async function fatosHoje(env: any, agora: number): Promise<FatosHoje> {
     provasRascunho: (pr.results ?? []).map((x: any) => String(x.modulo)),
     cortesSugeridos: Number(co?.n ?? 0), noticiasPendentes: Number(np?.n ?? 0), noticiasNovas: Number(nn?.n ?? 0),
     piorAula: ava?.titulo ? { titulo: String(ava.titulo), nao: Number(ava.nao), n: Number(ava.n) } : null,
+        pulso,
   };
 }
 
@@ -92,6 +96,7 @@ export const hashDosFatos = (f: FatosHoje) => [
   f.alunos, f.ativos, f.nunca, f.nuncaAcordo, f.concluiram, f.novos7d,
   f.provasRascunho.length, f.cortesSugeridos, f.noticiasPendentes,
   f.piorAula ? `${f.piorAula.titulo}:${f.piorAula.nao}` : "",
+    f.pulso ? `${f.pulso.emRisco}:${f.pulso.embaixadores}` : "",
 ].join("|");
 
 /* ---------------- briefing: determinístico sempre, IA quando há modelo ---------------- */
@@ -105,6 +110,8 @@ export function frasesDosFatos(f: FatosHoje): string[] {
   out.push(`${f.ativos} de ${f.alunos} aluno${f.alunos === 1 ? "" : "s"} ativos na semana.`);
   if (f.nunca) out.push(`${f.nunca} nunca ${f.nunca === 1 ? "abriu" : "abriram"} o link — ${f.nuncaAcordo ? `${f.nuncaAcordo} ${f.nuncaAcordo === 1 ? "tem" : "têm"} de acordo e ${f.nuncaAcordo === 1 ? "está pronto" : "estão prontos"} para o reenvio` : "nenhum tem de acordo ainda"}.`);
   if (f.piorAula) out.push(`A aula "${f.piorAula.titulo}" acumula ${f.piorAula.nao} avaliaç${f.piorAula.nao === 1 ? "ão" : "ões"} "não útil" em ${f.piorAula.n} e pede uma olhada.`);
+    if (f.pulso?.emRisco) out.push(`${f.pulso.emRisco} aluno${f.pulso.emRisco === 1 ? " está" : "s estão"} com pulso baixo (3 ou menos de 10)${f.pulso.risco[0] ? ` — o mais crítico é ${f.pulso.risco[0].nome} (${f.pulso.risco[0].score}/10, ${f.pulso.risco[0].detalhe})` : ""} — vale um contato antes do abandono.`);
+    if (f.pulso?.embaixadores) out.push(`${f.pulso.embaixadores} aluno${f.pulso.embaixadores === 1 ? " está" : "s estão"} com pulso 8 ou mais — candidato${f.pulso.embaixadores === 1 ? "" : "s"} a depoimento ou indicação.`);
   const fila: string[] = [];
   if (f.noticiasPendentes) fila.push(`${f.noticiasPendentes} notícia${f.noticiasPendentes === 1 ? "" : "s"} triada${f.noticiasPendentes === 1 ? "" : "s"}`);
   if (f.provasRascunho.length) fila.push(`${f.provasRascunho.length} prova${f.provasRascunho.length === 1 ? "" : "s"} em rascunho`);
@@ -315,5 +322,6 @@ export function secaoHoje(o: {
       ${concluiramCard}
     </div>
     <div class="hj-2col">${funilHtml}${movimentoHtml}</div>
+        ${secaoPulso(f.pulso)}
   </section>`;
 }
