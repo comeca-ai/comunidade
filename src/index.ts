@@ -9,6 +9,7 @@ import { enviarLinkMagico, VALIDADE_ENTRADA } from "./acesso";
 import { rotasAdmin } from "./admin";
 import { rotasFunil, garantirEsquemaFunil, registrarAcesso } from "./funil";
 import { rotasTranscricao, garantirTabelasTranscricao, semearDoBundle, avancarTranscricoes, transcricaoDe, secaoTranscricaoAula } from "./transcricao";
+import { enviarDigestSemanal } from "./digest";
 import { rotasCortes } from "./cortes";
 import { avancarVetores } from "./modelos";
 import { rotasDesempenho, posicaoSalva, avaliacaoDe, blocoAvaliacao, SCRIPT_PLAYER } from "./desempenho";
@@ -862,6 +863,8 @@ export default {
       .then(() => avancarVetores(env, agora()))
       // notícias "No radar": coleta ~1x/h + triagem por IA do que chegou
       .then(() => atualizarNoticias(env, agora()))
+                        // digest semanal "Sua semana na escola": sexta de manhã, um por aluno/semana
+                        .then(() => enviarDigestSemanal(env, agora()))
       // briefing do cockpit "Hoje": a IA reescreve quando os fatos mudam
       .then(() => atualizarBriefing(env, agora())).catch((e) => console.error("transcrições:", e))),
 };
