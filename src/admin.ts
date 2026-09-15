@@ -339,6 +339,32 @@ export function rotasAdmin(d: Deps) {
         ${secaoEquipe({ admins: equipe, eu: String(admin.email).toLowerCase(), agora, aviso: q.equipe ? `<div class="aviso" style="margin-bottom:14px">${esc(q.equipe)}</div>` : "" })}
       </section>
     </main>
+    <script>
+    // uma linha de contexto no topo de cada aba — o painel se explica sozinho
+    (function(){
+    var EXPL = {
+    hoje: "O que precisa de você agora: briefing do dia, fila de aprovações e os números que importam.",
+    alunos: "Todos os matriculados. Busque por nome ou e-mail, filtre por situação e abra a ficha de cada um.",
+    funil: "Onde cada aluno está entre o convite e a conclusão — quem parou, em qual etapa, e a ação para destravar.",
+    desempenho: "Como as aulas performam: quedas de audiência, pulos e avaliações dos alunos. Alertas pedem sua atenção.",
+    provas: "Provas por módulo geradas pela IA. Revise as questões, publique e defina se o certificado exige aprovação.",
+    convidar: "Cadastre alunos (lista colada ou CSV) e envie o link de acesso. Pedidos feitos pelo site chegam aqui.",
+    aulas: "A biblioteca de vídeo, sincronizada do Stream a cada 15 min. O módulo sai do título do vídeo.",
+    leituras: "PDFs de apoio por módulo, servidos com proteção. Veja quem já leu o quê.",
+    inteligencia: "Busca por significado nas transcrições das aulas e cortes de vídeo sugeridos pela IA para as redes.",
+    noticias: "Curadoria do bloco No radar que os alunos veem: aprove ou oculte o que a IA triou.",
+    equipe: "Quem administra este painel além de você. Adicione ou remova admins."
+    };
+    document.querySelectorAll(".painel-aba").forEach(function(s){
+    var t = EXPL[s.id]; if (!t) return;
+    var p = document.createElement("p");
+    p.className = "aula-meta";
+    p.style.cssText = "margin:2px 0 16px;max-width:78ch";
+    p.textContent = t;
+    s.insertBefore(p, s.firstChild);
+    });
+    })();
+    </script>
     <script>${PAINEL_JS}</script>`;
     return c.html(pagina({ escola: c.env.NOME_ESCOLA, titulo: "Painel", aluno: admin, corpo }));
   });
