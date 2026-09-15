@@ -198,6 +198,7 @@ export function rotasAdmin(d: Deps) {
 .gtab.ativa{border-bottom-color:#1F1BE4}
 .gtab.ativa b{color:#1F1BE4}
 .snav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.snav[hidden]{display:none!important}
 .schip{border:1px solid var(--linha);border-radius:99px;padding:6px 15px;font-size:13px;display:flex;align-items:center;gap:6px}
 .schip.ativa{background:#1F1BE4;border-color:#1F1BE4;color:#fff}
 .schip.ativa .aba-n{background:#fff;color:#000}
