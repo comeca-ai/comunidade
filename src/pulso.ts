@@ -7,14 +7,28 @@
 // sinaliza risco de abandono antes de ele acontecer; pulso alto (8+) aponta
 // os embaixadores — depoimento, indicação, case. Quem nunca entrou não
 // pontua: o funil de entrada já cuida deles.
+//
+// notasDaTurma é a camada crua (uma linha por aluno, com e-mail) — o cockpit
+// agrega em pulsoDaTurma e o digest semanal (digest.ts) escolhe o tom do
+// e-mail por ela.
 
 import { esc } from "./ui";
 import { DIA, diaLocal, nomeOu, iniciais } from "./apoio";
 
+export type NotaAluno = {
+  id: number; email: string; nome: string; iniciais: string;
+  score: number;
+  tendencia: -1 | 0 | 1; // dias de acesso vs. os 30 dias anteriores
+  concluiu: boolean;
+  recencia: number;      // dias desde o último acesso
+  feitas: number;        // aulas concluídas (total)
+  detalhe: string;       // "sem acesso há 12 dias · 3/14 aulas"
+};
+
 export type AlunoPulso = {
   id: number; nome: string; iniciais: string; score: number;
-  tendencia: -1 | 0 | 1; // dias de acesso vs. os 30 dias anteriores
-  detalhe: string;       // "sem acesso há 12 dias · 3/14 aulas"
+  tendencia: -1 | 0 | 1;
+  detalhe: string;
 };
 
 export type PulsoTurma = {
@@ -37,7 +51,7 @@ const nota = (d: { recencia: number; dias30: number; feitas30: number; lidas30: 
   return Math.max(1, Math.min(10, s));
 };
 
-export async function pulsoDaTurma(env: any, agora: number): Promise<PulsoTurma | null> {
+export async function notasDaTurma(env: any, agora: number): Promise<{ totalAulas: number; notas: NotaAluno[] }> {
   const d30 = agora - 30 * DIA;
   const dia30 = diaLocal(agora) - 30, dia60 = diaLocal(agora) - 60;
   const [r, tot] = await Promise.all([
@@ -56,20 +70,25 @@ export async function pulsoDaTurma(env: any, agora: number): Promise<PulsoTurma 
     env.DB.prepare(`SELECT COUNT(*) n FROM aulas WHERE publicada = 1`).first(),
   ]);
   const totalAulas = Number(tot?.n ?? 0);
-  const linhas: any[] = r.results ?? [];
-  if (!linhas.length) return null;
-  const todos = linhas.map((a) => {
+  const notas = ((r.results ?? []) as any[]).map((a) => {
     const recencia = Math.floor((agora - Number(a.ultimo_acesso)) / DIA);
     const dias30 = Number(a.dias30), antes = Number(a.dias_antes);
     const concluiu = totalAulas > 0 && Number(a.feitas) >= totalAulas;
     return {
-      id: Number(a.id), nome: nomeOu(a), iniciais: iniciais(a), concluiu,
+      id: Number(a.id), email: String(a.email), nome: nomeOu(a), iniciais: iniciais(a), concluiu,
+      recencia, feitas: Number(a.feitas),
       score: nota({ recencia, dias30, feitas30: Number(a.feitas30), lidas30: Number(a.lidas30) }),
       tendencia: (dias30 > antes + 1 ? 1 : dias30 < antes - 1 ? -1 : 0) as -1 | 0 | 1,
       detalhe: `${recencia <= 0 ? "entrou hoje" : `sem acesso há ${recencia} dia${recencia === 1 ? "" : "s"}`} · ${
         concluiu ? "concluiu o curso" : `${a.feitas}/${totalAulas} aulas`}`,
     };
   });
+  return { totalAulas, notas };
+}
+
+export async function pulsoDaTurma(env: any, agora: number): Promise<PulsoTurma | null> {
+  const { notas: todos } = await notasDaTurma(env, agora);
+  if (!todos.length) return null;
   const emRisco = todos.filter((t) => !t.concluiu && t.score <= 3);
   const altos = todos.filter((t) => t.score >= 8);
   return {
